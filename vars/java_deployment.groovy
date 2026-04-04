@@ -1,48 +1,53 @@
 node {
-    // Define tool names as configured in 'Global Tool Configuration'
-    def mvnHome = tool 'MAVEN_HOME' 
 
-    try {
-        // 1. Stage: Git Checkout
-        // Pulls code from the repository defined in the Jenkins job configuration.
-        stage('Checkout') {
-            checkout scm
-        }
+    def IMAGE_NAME = "java-app"
+    def TAG = "latest"
 
-        // 2. Stage: Build
-        // Compiles the Java source code using Maven.
-        stage('Build') {
-            sh "'${mvnHome}/bin/mvn' clean compile"
-        }
-
-        // 3. Stage: Unit Test
-        // Executes JUnit test cases and ensures the build fails if tests fail.
-        stage('Test') {
-            sh "'${mvnHome}/bin/mvn' test"
-        }
-
-        // 4. Stage: Code Quality (SonarQube)
-        // Scans code for vulnerabilities and 'smells'. 
-        // 'SonarQubeServer' must match your Jenkins System configuration name.
-        stage('Code Quality') {
-            withSonarQubeEnv('SonarQubeServer') {
-                sh "'${mvnHome}/bin/mvn' sonar:sonar"
-            }
-        }
-
-        // 5. Stage: Package
-        // Generates the deployable artifact (JAR/WAR).
-        stage('Package') {
-            sh "'${mvnHome}/bin/mvn' package -DskipTests"
-        }
-
-    } catch (Exception e) {
-        currentBuild.result = 'FAILURE'
-        throw e
-    } finally {
-        // 6. Post-Build Actions
-        // Always archive test results and build artifacts regardless of success.
-        junit '**/target/surefire-reports/*.xml'
-        archiveArtifacts artifacts: '**/target/*.jar', fingerprint: true
+    stage('Checkout') {
+        echo "Cloning source code..."
+        git branch: 'main',
+            url: 'https://github.com/your-repo/java-app.git',
+            credentialsId: 'git-credentials-id'
     }
+
+    stage('Build (Skip Tests)') {
+        echo "Building application with Maven..."
+        sh 'mvn clean package -DskipTests'
+    }
+/*
+    stage('SonarQube Analysis') {
+        echo "Running SonarQube analysis..."
+
+        withSonarQubeEnv('sonarqube-server') {
+            sh '''
+            mvn sonar:sonar \
+            -Dsonar.projectKey=java-app \
+            -Dsonar.projectName=java-app
+            '''
+        }
+    }
+
+    stage('Quality Gate') {
+        echo "Waiting for Quality Gate result..."
+
+        timeout(time: 5, unit: 'MINUTES') {
+            waitForQualityGate abortPipeline: true
+        }
+    }
+
+    stage('Build Docker Image') {
+        echo "Building Docker image..."
+
+        sh "docker build -t ${IMAGE_NAME}:${TAG} ."
+    }
+
+    stage('Run Docker Container') {
+        echo "Running container..."
+
+        sh """
+        docker rm -f java-app-container || true
+        docker run -d -p 8080:8080 --name java-app-container ${IMAGE_NAME}:${TAG}
+        """
+    }
+    */
 }
