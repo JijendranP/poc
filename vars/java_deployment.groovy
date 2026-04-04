@@ -1,3 +1,8 @@
+import java.text.SimpleDateFormat
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+import hudson.nodel.*
+
 node {
 
     def IMAGE_NAME = "java-app"
